@@ -1,0 +1,12 @@
+{
+    "name": "wizjo/tools-monitor-wordpress",
+    "description": "Wtyczka WordPressa udostępniająca monitoringowi Wizjo Tools stan witryny.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "keywords": ["wordpress", "monitoring", "health", "wizjo"],
+    "homepage": "https://tools.ewizjo.pl",
+    "require": {
+        "php": ">=7.4"
+    },
+    "minimum-stability": "stable"
+}
