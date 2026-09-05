@@ -1,0 +1,21 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  plugin-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+      - run: php -l wizjo-monitor.php
+      - run: php -l uninstall.php
+      - run: php tests/run.php
+      - uses: wordpress/plugin-check-action@v1
+        with:
+          slug: wizjo-monitor

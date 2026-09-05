@@ -6,14 +6,14 @@ Wtyczka WordPressa udostępniająca monitoringowi Wizjo Tools stan witryny: bazy
 
 - WordPress 6.0 lub nowszy
 - PHP 7.4 lub nowszy
-- Aktualna wersja wtyczki: 1.0.0
+- Aktualna wersja wtyczki: 1.1.0
 
 ## Co sprawdza
 
 - czy baza danych odpowiada na zapytanie kontrolne,
-- ilość wolnego miejsca na dysku - ostrzeżenie poniżej 15%, awaria poniżej 5%,
-- możliwość zapisu w katalogu `uploads`,
-- zaległości crona WordPressa,
+- ilość wolnego miejsca na dysku wraz z liczbą wolnych GB,
+- rzeczywistą możliwość zapisu, odczytu i usunięcia pliku w katalogu `uploads`,
+- zaległości crona WordPressa wraz z nazwą najstarszego hooka,
 - liczbę oczekujących aktualizacji rdzenia, wtyczek i motywów,
 - tryb debugowania włączony na produkcji,
 - wersję PHP bez wsparcia.
@@ -25,7 +25,8 @@ Strona może odpowiadać kodem HTTP 200 również wtedy, gdy dysk jest pełny, c
 - nie inicjuje żadnych połączeń - odpowiada wyłącznie na zapytanie z prawidłowym tokenem,
 - nie wysyła treści strony ani danych użytkowników,
 - nie dodaje elementów do frontendu,
-- nie zapisuje niczego poza własnym tokenem w opcjach WordPressa.
+- nie pozostawia plików ani danych poza własnym tokenem w opcjach WordPressa;
+  plik użyty do testu zapisu jest od razu usuwany.
 
 ## Instalacja
 
@@ -45,7 +46,20 @@ Adres jest publiczny, ale bez poprawnego tokenu odpowiada kodem 403. Gdy token n
 
 Wpisz ten sam token w **Ustawienia > Wizjo Monitor**. Do czasu aktualizacji tokenu monitoring będzie zgłaszał, że wtyczka odrzuca uwierzytelnienie.
 
+## Aktualizacje
+
+Docelowym kanałem aktualizacji jest oficjalny katalog WordPress.org. Repozytorium
+GitHub pozostaje miejscem rozwoju, a wydania są synchronizowane do repozytorium
+WordPress.org po oznaczeniu wersji tagiem.
+
 ## Historia zmian
+
+### 1.1.0
+
+- poprawione wykrywanie wolnego miejsca na hostingach współdzielonych,
+- rzeczywisty test zapisu w katalogu uploads,
+- nazwa zaległego zadania WP-Cron w odpowiedzi diagnostycznej,
+- token przyjmowany wyłącznie w nagłówku `X-Wizjo-Token`.
 
 ### 1.0.0
 

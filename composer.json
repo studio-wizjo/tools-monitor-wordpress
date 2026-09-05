@@ -5,6 +5,10 @@
     "license": "GPL-2.0-or-later",
     "keywords": ["wordpress", "monitoring", "health", "wizjo"],
     "homepage": "https://tools.ewizjo.pl",
+    "support": {
+        "issues": "https://github.com/studio-wizjo/tools-monitor-wordpress/issues",
+        "source": "https://github.com/studio-wizjo/tools-monitor-wordpress"
+    },
     "require": {
         "php": ">=7.4"
     },

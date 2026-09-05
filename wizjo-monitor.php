@@ -3,25 +3,24 @@
  * Plugin Name:       Wizjo Monitor
  * Plugin URI:        https://tools.ewizjo.pl
  * Description:       Udostępnia monitoringowi Wizjo Tools stan tej witryny: baza, dysk, cron, aktualizacje. Wystawia jeden adres chroniony tokenem i nic poza tym nie robi.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
+ * Tested up to:      7.1
  * Requires PHP:      7.4
  * Author:            Wizjo
  * Author URI:        https://tools.ewizjo.pl
  * License:           GPL-2.0-or-later
  * Text Domain:       wizjo-monitor
  *
- * Wtyczka jest **tylko do odczytu**. Nie zapisuje niczego poza własnym
- * tokenem w opcjach, nie dodaje nic do frontendu i nie dzwoni nigdzie sama -
- * to my pukamy do niej, a nie odwrotnie. Dzięki temu witryna za firewallem
- * nie musi mieć wyjścia na świat, a milczenie serwera nadal znaczy awarię,
- * a nie "wtyczka się nie odezwała".
+ * Wtyczka zapisuje własny token w opcjach i wykonuje krótki test zapisu w
+ * katalogu uploads, po którym natychmiast usuwa plik próbny. Nie dodaje nic
+ * do frontendu i nie dzwoni nigdzie sama - to monitoring pyta ją o stan.
  */
 if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WIZJO_MONITOR_VERSION', '1.0.0');
+define('WIZJO_MONITOR_VERSION', '1.1.0');
 define('WIZJO_MONITOR_CONTRACT', 1);
 define('WIZJO_MONITOR_OPTION', 'wizjo_monitor_token');
 
@@ -61,10 +60,6 @@ function wizjo_monitor_authorised(WP_REST_Request $request)
     }
 
     $given = (string) $request->get_header('x-wizjo-token');
-
-    if ($given === '') {
-        $given = (string) $request->get_param('token');
-    }
 
     if ($given === '' || ! hash_equals($stored, $given)) {
         return new WP_Error('wizjo_monitor_forbidden', 'Nieprawidłowy token.', ['status' => 403]);
@@ -164,17 +159,22 @@ function wizjo_monitor_disk()
         return wizjo_monitor_check('disk', 'Miejsce na dysku', 'ok', 'Hosting nie podaje tej informacji.');
     }
 
-    $percent = round(($free / $total) * 100);
+    $percent = (int) round(($free / $total) * 100);
+    $message = wizjo_monitor_format_bytes($free).' wolnego ('.$percent.'%).';
 
-    if ($percent < 5) {
-        return wizjo_monitor_check('disk', 'Miejsce na dysku', 'failing', 'Zostało '.$percent.'% wolnego.');
+    // Na hostingach współdzielonych procent często dotyczy całej partycji
+    // serwera, a nie limitu konkretnego konta. Twardą awarię zgłaszamy więc
+    // dopiero przy naprawdę małej liczbie wolnych bajtów. Możliwość faktycznego
+    // zapisu sprawdza osobno wizjo_monitor_uploads().
+    if ($free < 256 * 1024 * 1024) {
+        return wizjo_monitor_check('disk', 'Miejsce na dysku', 'failing', $message);
     }
 
     if ($percent < 15) {
-        return wizjo_monitor_check('disk', 'Miejsce na dysku', 'warning', 'Zostało '.$percent.'% wolnego.');
+        return wizjo_monitor_check('disk', 'Miejsce na dysku', 'warning', $message);
     }
 
-    return wizjo_monitor_check('disk', 'Miejsce na dysku', 'ok', $percent.'% wolnego.');
+    return wizjo_monitor_check('disk', 'Miejsce na dysku', 'ok', $message);
 }
 
 function wizjo_monitor_uploads()
@@ -183,6 +183,23 @@ function wizjo_monitor_uploads()
 
     if (! empty($uploads['error']) || ! is_writable($uploads['basedir'])) {
         return wizjo_monitor_check('uploads', 'Katalog plików', 'failing', 'Nie da się zapisać do katalogu uploads.');
+    }
+
+    $probe = trailingslashit($uploads['basedir']).'.wizjo-monitor-'.wp_generate_password(12, false, false).'.tmp';
+    $written = @file_put_contents($probe, 'ok', LOCK_EX);
+    $read = $written !== false ? @file_get_contents($probe) : false;
+    $deleted = ! file_exists($probe) || @unlink($probe);
+
+    if ($written === false || $read !== 'ok') {
+        if (file_exists($probe)) {
+            @unlink($probe);
+        }
+
+        return wizjo_monitor_check('uploads', 'Katalog plików', 'failing', 'Próbny zapis w katalogu uploads nie przeszedł.');
+    }
+
+    if (! $deleted) {
+        return wizjo_monitor_check('uploads', 'Katalog plików', 'warning', 'Zapis działa, ale nie udało się usunąć pliku próbnego.');
     }
 
     return wizjo_monitor_check('uploads', 'Katalog plików', 'ok');
@@ -209,18 +226,20 @@ function wizjo_monitor_cron()
 
     $oldest = min(array_keys($crons));
     $late = time() - $oldest;
+    $oldestHooks = array_keys($crons[$oldest]);
+    $oldestHook = isset($oldestHooks[0]) ? sanitize_text_field((string) $oldestHooks[0]) : 'nieznane zadanie';
 
     if ($late > 3 * HOUR_IN_SECONDS) {
         return wizjo_monitor_check(
             'cron',
             'Zadania cykliczne',
             'failing',
-            'Najstarsze zadanie spóźnione o '.round($late / HOUR_IN_SECONDS).' godz.'
+            'Zadanie '.$oldestHook.' spóźnione o '.round($late / HOUR_IN_SECONDS).' godz.'
         );
     }
 
     if ($late > HOUR_IN_SECONDS) {
-        return wizjo_monitor_check('cron', 'Zadania cykliczne', 'warning', 'Zaległość ponad godzinę.');
+        return wizjo_monitor_check('cron', 'Zadania cykliczne', 'warning', 'Zadanie '.$oldestHook.' zalega ponad godzinę.');
     }
 
     return wizjo_monitor_check('cron', 'Zadania cykliczne', 'ok');
@@ -320,10 +339,16 @@ function wizjo_monitor_metrics()
 
     $free = @disk_free_space(ABSPATH);
     $total = @disk_total_space(ABSPATH);
+    $crons = _get_cron_array();
+    $oldest = ! empty($crons) ? min(array_keys($crons)) : null;
+    $oldestHooks = $oldest !== null ? array_keys($crons[$oldest]) : [];
 
     return [
         'disk_free_bytes' => $free ? (int) $free : null,
         'disk_total_bytes' => $total ? (int) $total : null,
+        'disk_free_percent' => $free && $total ? (int) round(($free / $total) * 100) : null,
+        'cron_late_seconds' => $oldest !== null ? max(0, time() - $oldest) : 0,
+        'cron_oldest_hook' => isset($oldestHooks[0]) ? sanitize_text_field((string) $oldestHooks[0]) : null,
         'posts' => (int) wp_count_posts()->publish,
         'users' => (int) count_users()['total_users'],
         'db_size_mb' => (float) $wpdb->get_var(
@@ -334,6 +359,15 @@ function wizjo_monitor_metrics()
             )
         ),
     ];
+}
+
+function wizjo_monitor_format_bytes($bytes)
+{
+    if (function_exists('size_format')) {
+        return size_format((int) $bytes, 1);
+    }
+
+    return round(((int) $bytes) / 1024 / 1024 / 1024, 1).' GB';
 }
 
 /* -------------------------------------------------------------------------
@@ -407,9 +441,7 @@ function wizjo_monitor_settings_page()
                             <?php if ($token === '') { ?>
                                 Najpierw zapisz token - do tego czasu adres odpowiada kodem 503.
                             <?php } else { ?>
-                                <a href="<?php echo esc_url(add_query_arg('token', $token, $url)); ?>" target="_blank" rel="noopener">
-                                    Otwórz i sprawdź, co widzi monitoring
-                                </a>
+                                Token jest zapisany. Test wykonaj przyciskiem „Sprawdź, czy działa” w panelu Wizjo Tools.
                             <?php } ?>
                         </p>
                     </td>

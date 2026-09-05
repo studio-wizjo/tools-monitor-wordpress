@@ -1,0 +1,6 @@
+/.git
+/.github
+/.distignore
+/composer.json
+/README.md
+/tests
