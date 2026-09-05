@@ -181,18 +181,25 @@ function wizjo_monitor_uploads()
 {
     $uploads = wp_upload_dir();
 
-    if (! empty($uploads['error']) || ! is_writable($uploads['basedir'])) {
+    if (! class_exists('WP_Filesystem_Direct')) {
+        require_once ABSPATH.'wp-admin/includes/class-wp-filesystem-base.php';
+        require_once ABSPATH.'wp-admin/includes/class-wp-filesystem-direct.php';
+    }
+
+    $filesystem = new WP_Filesystem_Direct(null);
+
+    if (! empty($uploads['error']) || ! $filesystem->is_writable($uploads['basedir'])) {
         return wizjo_monitor_check('uploads', 'Katalog plików', 'failing', 'Nie da się zapisać do katalogu uploads.');
     }
 
     $probe = trailingslashit($uploads['basedir']).'.wizjo-monitor-'.wp_generate_password(12, false, false).'.tmp';
-    $written = @file_put_contents($probe, 'ok', LOCK_EX);
-    $read = $written !== false ? @file_get_contents($probe) : false;
-    $deleted = ! file_exists($probe) || @unlink($probe);
+    $written = $filesystem->put_contents($probe, 'ok', FS_CHMOD_FILE);
+    $read = $written ? $filesystem->get_contents($probe) : false;
+    $deleted = ! $filesystem->exists($probe) || $filesystem->delete($probe);
 
-    if ($written === false || $read !== 'ok') {
-        if (file_exists($probe)) {
-            @unlink($probe);
+    if (! $written || $read !== 'ok') {
+        if ($filesystem->exists($probe)) {
+            $filesystem->delete($probe);
         }
 
         return wizjo_monitor_check('uploads', 'Katalog plików', 'failing', 'Próbny zapis w katalogu uploads nie przeszedł.');

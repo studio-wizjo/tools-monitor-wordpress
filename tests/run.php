@@ -6,6 +6,7 @@ if (! defined('ABSPATH')) {
 
 define('HOUR_IN_SECONDS', 3600);
 define('DB_NAME', 'wordpress_test');
+define('FS_CHMOD_FILE', 0644);
 
 $GLOBALS['wizjo_test_state'] = [
     'database_ok' => true,
@@ -76,6 +77,16 @@ class WizjoTestWpdb
     {
         return $query;
     }
+}
+
+class WP_Filesystem_Direct
+{
+    public function __construct($args = '') {}
+    public function is_writable($path) { return is_writable($path); }
+    public function put_contents($file, $contents, $mode = false) { return file_put_contents($file, $contents) !== false; }
+    public function get_contents($file) { return file_get_contents($file); }
+    public function exists($file) { return file_exists($file); }
+    public function delete($file) { return ! file_exists($file) || unlink($file); }
 }
 
 $GLOBALS['wpdb'] = new WizjoTestWpdb;

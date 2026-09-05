@@ -16,6 +16,11 @@ jobs:
       - run: php -l wizjo-monitor.php
       - run: php -l uninstall.php
       - run: php tests/run.php
+      - name: Build WordPress.org package
+        run: |
+          mkdir -p build/wizjo-monitor
+          cp wizjo-monitor.php readme.txt uninstall.php build/wizjo-monitor/
       - uses: wordpress/plugin-check-action@v1
         with:
           slug: wizjo-monitor
+          build-dir: ./build/wizjo-monitor
