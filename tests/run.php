@@ -129,7 +129,7 @@ function wizjo_assert($condition, $message)
 }
 
 $report = wizjo_monitor_report()->data;
-wizjo_assert($report['app']['agent'] === '1.1.0', 'Raport zawiera wersję 1.1.0.');
+wizjo_assert($report['app']['agent'] === '1.1.1', 'Raport zawiera wersję 1.1.1.');
 wizjo_assert($report['wizjo'] === 1, 'Kontrakt raportu pozostaje zgodny.');
 wizjo_assert(in_array($report['status'], ['ok', 'warning'], true), 'Zapisywalny katalog nie zgłasza awarii.');
 

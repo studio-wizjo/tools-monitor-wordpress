@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:       Wizjo Monitor
- * Plugin URI:        https://tools.ewizjo.pl
+ * Plugin URI:        https://github.com/studio-wizjo/tools-monitor-wordpress
  * Description:       Udostępnia monitoringowi Wizjo Tools stan tej witryny: baza, dysk, cron, aktualizacje. Wystawia jeden adres chroniony tokenem i nic poza tym nie robi.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 6.0
  * Tested up to:      7.1
  * Requires PHP:      7.4
@@ -20,7 +20,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WIZJO_MONITOR_VERSION', '1.1.0');
+define('WIZJO_MONITOR_VERSION', '1.1.1');
 define('WIZJO_MONITOR_CONTRACT', 1);
 define('WIZJO_MONITOR_OPTION', 'wizjo_monitor_token');
 
