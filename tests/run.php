@@ -15,17 +15,40 @@ $GLOBALS['wizjo_test_state'] = [
 
 class WP_REST_Response
 {
-    public function __construct(public $data, public int $status = 200) {}
+    public $data;
+    public $status;
+
+    public function __construct($data, $status = 200)
+    {
+        $this->data = $data;
+        $this->status = $status;
+    }
 }
 
 class WP_Error
 {
-    public function __construct(public string $code, public string $message, public array $data = []) {}
+    public $code;
+    public $message;
+    public $data;
+
+    public function __construct($code, $message, $data = [])
+    {
+        $this->code = $code;
+        $this->message = $message;
+        $this->data = $data;
+    }
 }
 
 class WP_REST_Request
 {
-    public function __construct(private array $headers = [], private array $params = []) {}
+    private $headers;
+    private $params;
+
+    public function __construct($headers = [], $params = [])
+    {
+        $this->headers = $headers;
+        $this->params = $params;
+    }
 
     public function get_header($name)
     {
