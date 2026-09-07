@@ -5,7 +5,6 @@
  * Description:       Udostępnia monitoringowi Wizjo Tools stan tej witryny: baza, dysk, cron, aktualizacje. Wystawia jeden adres chroniony tokenem i nic poza tym nie robi.
  * Version:           1.1.1
  * Requires at least: 6.0
- * Tested up to:      7.1
  * Requires PHP:      7.4
  * Author:            Wizjo
  * Author URI:        https://tools.ewizjo.pl

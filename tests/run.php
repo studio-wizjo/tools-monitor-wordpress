@@ -128,6 +128,18 @@ function wizjo_assert($condition, $message)
     }
 }
 
+$plugin_source = file_get_contents(dirname(__DIR__).'/wizjo-monitor.php');
+$readme_source = file_get_contents(dirname(__DIR__).'/readme.txt');
+
+wizjo_assert(
+    strpos($plugin_source, 'Tested up to:') === false,
+    'Nagłówek PHP nie deklaruje pola Tested up to.'
+);
+wizjo_assert(
+    preg_match('/^Contributors:\s*studiowizjo\s*$/mi', $readme_source) === 1,
+    'Readme wskazuje właściciela zgłoszenia jako autora.'
+);
+
 $report = wizjo_monitor_report()->data;
 wizjo_assert($report['app']['agent'] === '1.1.1', 'Raport zawiera wersję 1.1.1.');
 wizjo_assert($report['wizjo'] === 1, 'Kontrakt raportu pozostaje zgodny.');
