@@ -62,4 +62,4 @@ jobs:
           SLUG: wizjo-monitor
           VERSION: ${{ steps.release.outputs.version }}
           SVN_USERNAME: studiowizjo
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SVN_PASSWORD: ${{ inputs.dry_run && 'dry-run' || secrets.SVN_PASSWORD }}
