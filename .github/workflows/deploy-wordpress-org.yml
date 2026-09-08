@@ -1,0 +1,65 @@
+name: Deploy to WordPress.org
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: WordPress.org release version
+        required: true
+        default: '1.1.1'
+      dry_run:
+        description: Validate without committing to WordPress.org SVN
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wordpress-org-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine release version
+        id: release
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release version: $version" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify plugin metadata
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          grep -Eq "^[[:space:]]*\*[[:space:]]+Version:[[:space:]]+${VERSION}[[:space:]]*$" wizjo-monitor.php
+          grep -Eq "^Stable tag:[[:space:]]+${VERSION}[[:space:]]*$" readme.txt
+
+      - name: Deploy plugin
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          dry-run: ${{ inputs.dry_run }}
+        env:
+          SLUG: wizjo-monitor
+          VERSION: ${{ steps.release.outputs.version }}
+          SVN_USERNAME: studiowizjo
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
