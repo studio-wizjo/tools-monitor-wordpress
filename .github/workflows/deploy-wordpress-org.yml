@@ -57,9 +57,9 @@ jobs:
       - name: Deploy plugin
         uses: 10up/action-wordpress-plugin-deploy@stable
         with:
-          dry-run: ${{ inputs.dry_run }}
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         env:
           SLUG: wizjo-monitor
           VERSION: ${{ steps.release.outputs.version }}
           SVN_USERNAME: studiowizjo
-          SVN_PASSWORD: ${{ inputs.dry_run && 'dry-run' || secrets.SVN_PASSWORD }}
+          SVN_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'dry-run' || secrets.SVN_PASSWORD }}
