@@ -4,7 +4,7 @@ Tags: monitoring, health, uptime, diagnostics
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,6 +59,10 @@ real write to uploads is reported as an error.
 
 == Upgrade Notice ==
 
+= 1.1.2 =
+
+Standardizes developer-facing code comments in English.
+
 = 1.1.1 =
 
 Uses a dedicated plugin page URL required by the WordPress.org directory.
@@ -69,6 +73,10 @@ Improves shared-hosting disk checks, verifies real uploads writes and reports
 the name of the oldest overdue cron hook.
 
 == Changelog ==
+
+= 1.1.2 =
+
+* Translate developer-facing code comments to English.
 
 = 1.1.1 =
 

@@ -3,7 +3,7 @@
  * Plugin Name:       Wizjo Monitor
  * Plugin URI:        https://github.com/studio-wizjo/tools-monitor-wordpress
  * Description:       Udostępnia monitoringowi Wizjo Tools stan tej witryny: baza, dysk, cron, aktualizacje. Wystawia jeden adres chroniony tokenem i nic poza tym nie robi.
- * Version:           1.1.1
+ * Version:           1.1.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Wizjo
@@ -11,25 +11,24 @@
  * License:           GPL-2.0-or-later
  * Text Domain:       wizjo-monitor
  *
- * Wtyczka zapisuje własny token w opcjach i wykonuje krótki test zapisu w
- * katalogu uploads, po którym natychmiast usuwa plik próbny. Nie dodaje nic
- * do frontendu i nie dzwoni nigdzie sama - to monitoring pyta ją o stan.
+ * The plugin stores its own token in the options table and performs a short
+ * write test in the uploads directory, deleting the probe file immediately.
+ * It adds nothing to the frontend and makes no outgoing requests.
  */
 if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WIZJO_MONITOR_VERSION', '1.1.1');
+define('WIZJO_MONITOR_VERSION', '1.1.2');
 define('WIZJO_MONITOR_CONTRACT', 1);
 define('WIZJO_MONITOR_OPTION', 'wizjo_monitor_token');
 
 /**
- * Rejestracja adresu diagnostycznego.
+ * Register the diagnostic endpoint.
  *
- * W REST API WordPressa, a nie własnym przepisaniu adresu: REST ma gotowe
- * routowanie, nagłówki i obsługę błędów, a każde własne rozwiązanie różniłoby
- * się od nich w drobiazgach akurat na tej jednej witrynie, na której coś
- * pójdzie nie tak.
+ * Use the WordPress REST API instead of a custom URL rewrite. REST already
+ * provides routing, headers and error handling, avoiding subtle differences
+ * that could otherwise surface on a single site.
  */
 add_action('rest_api_init', function () {
     register_rest_route('wizjo-monitor/v1', '/health', [
@@ -40,11 +39,11 @@ add_action('rest_api_init', function () {
 });
 
 /**
- * Token porównywany czasem stałym.
+ * Compare the token in constant time.
  *
- * `hash_equals`, nie `===`: porównanie, które kończy się na pierwszej różnej
- * literze, mierzalnie zdradza, ile znaków się zgadza. Przy adresie dostępnym
- * publicznie to jedyna rzecz, która stoi między obcym a diagnostyką serwera.
+ * Use `hash_equals` instead of `===`. A comparison that stops at the first
+ * different character can reveal how much of the token matches. This token
+ * protects the diagnostics exposed by the public endpoint.
  */
 function wizjo_monitor_authorised(WP_REST_Request $request)
 {
@@ -68,12 +67,10 @@ function wizjo_monitor_authorised(WP_REST_Request $request)
 }
 
 /**
- * Stan witryny, zebrany w jedno.
+ * Collect the site status in one response.
  *
- * Każda pozycja odpowiada na pytanie, które ktoś naprawdę zadaje o godzinie
- * trzeciej w nocy - i podaje przy tym liczbę, a nie samo "ok", żeby dało się
- * zobaczyć, że coś **zbliża się** do awarii, zamiast dowiedzieć się dopiero
- * po niej.
+ * Each check answers a practical operational question and includes measurable
+ * values where possible, so an approaching failure can be detected early.
  */
 function wizjo_monitor_report()
 {
@@ -112,7 +109,7 @@ function wizjo_monitor_report()
     ], 200);
 }
 
-/** Najgorszy stan spośród pozycji - jedna zepsuta psuje całość. */
+/** Return the most severe status reported by any check. */
 function wizjo_monitor_roll_up(array $checks)
 {
     $statuses = wp_list_pluck($checks, 'status');
@@ -143,11 +140,10 @@ function wizjo_monitor_database()
 }
 
 /**
- * Wolne miejsce na dysku.
+ * Check free disk space.
  *
- * Zapełniony dysk nie wywraca WordPressa od razu - najpierw przestają działać
- * kopie zapasowe i wysyłka plików, a strona nadal odpowiada kodem 200. Z zewnątrz
- * wygląda to na pełne zdrowie aż do dnia, w którym baza nie ma gdzie zapisać.
+ * A full disk does not stop WordPress immediately. Backups and uploads fail
+ * first while the site may continue returning HTTP 200 responses.
  */
 function wizjo_monitor_disk()
 {
@@ -161,10 +157,9 @@ function wizjo_monitor_disk()
     $percent = (int) round(($free / $total) * 100);
     $message = wizjo_monitor_format_bytes($free).' wolnego ('.$percent.'%).';
 
-    // Na hostingach współdzielonych procent często dotyczy całej partycji
-    // serwera, a nie limitu konkretnego konta. Twardą awarię zgłaszamy więc
-    // dopiero przy naprawdę małej liczbie wolnych bajtów. Możliwość faktycznego
-    // zapisu sprawdza osobno wizjo_monitor_uploads().
+    // On shared hosting, the percentage often describes the entire server
+    // partition rather than the account quota. Report a hard failure only when
+    // very few bytes remain. wizjo_monitor_uploads() verifies actual writes.
     if ($free < 256 * 1024 * 1024) {
         return wizjo_monitor_check('disk', 'Miejsce na dysku', 'failing', $message);
     }
@@ -212,11 +207,11 @@ function wizjo_monitor_uploads()
 }
 
 /**
- * Czy cron WordPressa w ogóle chodzi.
+ * Check whether WordPress cron is running.
  *
- * Zadanie zaległe o kilka minut jest normalne - cron WP-a rusza przy odwiedzinach.
- * Zaległe o godziny znaczy, że na witrynę nikt nie wchodzi albo cron jest
- * wyłączony, a wtedy cicho nie działają kopie, wysyłka maili i aktualizacje.
+ * A task overdue by a few minutes is normal because WP-Cron runs on visits.
+ * A delay measured in hours may mean cron is disabled or receives no traffic,
+ * which can silently stop backups, email delivery and updates.
  */
 function wizjo_monitor_cron()
 {
@@ -252,11 +247,10 @@ function wizjo_monitor_cron()
 }
 
 /**
- * Zaległe aktualizacje - osobno bezpieczeństwo, osobno reszta.
+ * Check pending updates.
  *
- * Aktualizacja wtyczki to nie awaria i nie ma prawa dzwonić w nocy, ale ma
- * prawo stać na żółto: dziura w niezaktualizowanej wtyczce jest najczęstszym
- * powodem, dla którego witryna przestaje być własna.
+ * A pending plugin update is not a failure, but it should produce a warning
+ * because outdated extensions are a common security risk.
  */
 function wizjo_monitor_updates()
 {
@@ -300,11 +294,10 @@ function wizjo_monitor_updates()
 }
 
 /**
- * Tryb debugowania włączony na produkcji.
+ * Check whether debug output is enabled in production.
  *
- * Ostrzeżenie, nie awaria - ale to on wypisuje odwiedzającym ścieżki na dysku
- * i treść zapytań do bazy, więc na żywej witrynie jest błędem, o którym nikt
- * nie wie, dopóki ktoś nie zajrzy.
+ * This is a warning rather than a failure, but debug output may expose paths
+ * and database query details to visitors on a live site.
  */
 function wizjo_monitor_debug()
 {
@@ -328,7 +321,7 @@ function wizjo_monitor_debug()
     return wizjo_monitor_check('debug', 'Tryb debugowania', 'ok');
 }
 
-/** Wersja PHP, która przestała dostawać poprawki bezpieczeństwa. */
+/** Check for a PHP version that no longer receives security fixes. */
 function wizjo_monitor_php()
 {
     if (version_compare(PHP_VERSION, '8.1', '<')) {
@@ -338,7 +331,7 @@ function wizjo_monitor_php()
     return wizjo_monitor_check('php', 'Wersja PHP', 'ok', PHP_VERSION);
 }
 
-/** Liczby, które warto widzieć na wykresie, a nie tylko w komunikacie. */
+/** Return numeric values that are useful for monitoring charts. */
 function wizjo_monitor_metrics()
 {
     global $wpdb;
@@ -377,7 +370,7 @@ function wizjo_monitor_format_bytes($bytes)
 }
 
 /* -------------------------------------------------------------------------
- | Ekran ustawień: jedno pole i adres do skopiowania
+ | Settings screen: one token field and an endpoint URL to copy
  | ---------------------------------------------------------------------- */
 
 add_action('admin_menu', function () {
