@@ -6,11 +6,11 @@ if (! defined('ABSPATH')) {
 
 define('HOUR_IN_SECONDS', 3600);
 define('DB_NAME', 'wordpress_test');
-define('FS_CHMOD_FILE', 0644);
 
 $GLOBALS['wizjo_test_state'] = [
     'database_ok' => true,
     'cron_late_hours' => 0,
+    'filesystem_mode' => null,
     'token' => 'test-token',
 ];
 
@@ -83,7 +83,12 @@ class WP_Filesystem_Direct
 {
     public function __construct($args = '') {}
     public function is_writable($path) { return is_writable($path); }
-    public function put_contents($file, $contents, $mode = false) { return file_put_contents($file, $contents) !== false; }
+    public function put_contents($file, $contents, $mode = false)
+    {
+        $GLOBALS['wizjo_test_state']['filesystem_mode'] = $mode;
+
+        return file_put_contents($file, $contents) !== false;
+    }
     public function get_contents($file) { return file_get_contents($file); }
     public function exists($file) { return file_exists($file); }
     public function delete($file) { return ! file_exists($file) || unlink($file); }
@@ -141,9 +146,13 @@ wizjo_assert(
 );
 
 $report = wizjo_monitor_report()->data;
-wizjo_assert($report['app']['agent'] === '1.1.2', 'Raport zawiera wersję 1.1.2.');
+wizjo_assert($report['app']['agent'] === '1.1.3', 'Raport zawiera wersję 1.1.3.');
 wizjo_assert($report['wizjo'] === 1, 'Kontrakt raportu pozostaje zgodny.');
 wizjo_assert(in_array($report['status'], ['ok', 'warning'], true), 'Zapisywalny katalog nie zgłasza awarii.');
+wizjo_assert(
+    $GLOBALS['wizjo_test_state']['filesystem_mode'] === 0644,
+    'Test zapisu używa bezpiecznych uprawnień, gdy FS_CHMOD_FILE nie jest zdefiniowane.'
+);
 
 $GLOBALS['wizjo_test_state']['cron_late_hours'] = 4;
 $report = wizjo_monitor_report()->data;

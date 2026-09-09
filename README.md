@@ -6,7 +6,7 @@ Wtyczka WordPressa udostępniająca monitoringowi Wizjo Tools stan witryny: bazy
 
 - WordPress 6.0 lub nowszy
 - PHP 7.4 lub nowszy
-- Aktualna wersja wtyczki: 1.1.1
+- Aktualna wersja wtyczki: 1.1.3
 
 ## Co sprawdza
 
@@ -53,6 +53,14 @@ GitHub pozostaje miejscem rozwoju, a wydania są synchronizowane do repozytorium
 WordPress.org po oznaczeniu wersji tagiem.
 
 ## Historia zmian
+
+### 1.1.3
+
+- poprawiony błąd testu zapisu na instalacjach, które nie definiują wcześniej stałej `FS_CHMOD_FILE`.
+
+### 1.1.2
+
+- komentarze techniczne w kodzie zostały ujednolicone w języku angielskim.
 
 ### 1.1.1
 

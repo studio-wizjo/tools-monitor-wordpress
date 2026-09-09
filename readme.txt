@@ -4,7 +4,7 @@ Tags: monitoring, health, uptime, diagnostics
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,6 +59,10 @@ real write to uploads is reported as an error.
 
 == Upgrade Notice ==
 
+= 1.1.3 =
+
+Prevents a fatal error during the uploads write check when WordPress has not initialized its filesystem constants.
+
 = 1.1.2 =
 
 Standardizes developer-facing code comments in English.
@@ -73,6 +77,10 @@ Improves shared-hosting disk checks, verifies real uploads writes and reports
 the name of the oldest overdue cron hook.
 
 == Changelog ==
+
+= 1.1.3 =
+
+* Use safe default file permissions when FS_CHMOD_FILE is unavailable.
 
 = 1.1.2 =
 

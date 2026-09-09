@@ -3,7 +3,7 @@
  * Plugin Name:       Wizjo Monitor
  * Plugin URI:        https://github.com/studio-wizjo/tools-monitor-wordpress
  * Description:       Udostępnia monitoringowi Wizjo Tools stan tej witryny: baza, dysk, cron, aktualizacje. Wystawia jeden adres chroniony tokenem i nic poza tym nie robi.
- * Version:           1.1.2
+ * Version:           1.1.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Wizjo
@@ -19,7 +19,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WIZJO_MONITOR_VERSION', '1.1.2');
+define('WIZJO_MONITOR_VERSION', '1.1.3');
 define('WIZJO_MONITOR_CONTRACT', 1);
 define('WIZJO_MONITOR_OPTION', 'wizjo_monitor_token');
 
@@ -187,7 +187,8 @@ function wizjo_monitor_uploads()
     }
 
     $probe = trailingslashit($uploads['basedir']).'.wizjo-monitor-'.wp_generate_password(12, false, false).'.tmp';
-    $written = $filesystem->put_contents($probe, 'ok', FS_CHMOD_FILE);
+    $fileMode = defined('FS_CHMOD_FILE') ? constant('FS_CHMOD_FILE') : 0644;
+    $written = $filesystem->put_contents($probe, 'ok', $fileMode);
     $read = $written ? $filesystem->get_contents($probe) : false;
     $deleted = ! $filesystem->exists($probe) || $filesystem->delete($probe);
 
